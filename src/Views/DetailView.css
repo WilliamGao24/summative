@@ -1,0 +1,68 @@
+.movie-detail {
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    background-color: #000;
+    color: #fff;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.movie-content {
+    display: flex;
+    gap: 40px;
+    margin-bottom: 40px;
+}
+
+.movie-info {
+    flex: 2;
+}
+
+.movie-title {
+    font-size: 2.5rem;
+    margin-bottom: 20px;
+    color: #fff;
+}
+
+.movie-overview {
+    font-size: 1.1rem;
+    line-height: 1.6;
+    margin-bottom: 30px;
+}
+
+.movie-poster {
+    flex: 1;
+    max-width: 400px;
+    border-radius: 15px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.6);
+}
+
+.trailers-section {
+    margin-top: 40px;
+}
+
+.trailers-section h2 {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.trailers-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 30px;
+}
+
+.trailer-tile {
+    text-align: center;
+}
+
+.trailer-thumbnail {
+    width: 100%;
+    border-radius: 10px;
+    margin-bottom: 15px;
+    transition: transform 0.3s;
+}
+
+.trailer-thumbnail:hover {
+    transform: scale(1.05);
+}

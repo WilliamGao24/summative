@@ -1,0 +1,33 @@
+.app-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #000;
+    color: #fff;
+}
+
+.movieview-title {
+    text-align: center;
+    font-size: 2rem;
+    margin: 1rem 0;
+    color: #fff;
+}
+
+.genre-container {
+    display: flex;
+    flex: 1;
+    margin: 0;
+    padding: 0;
+}
+
+.genre-list {
+    width: 200px;
+    background-color: #1a1a1a;
+    padding: 1rem;
+    border-right: 1px solid #444;
+}
+
+.genre-movies {
+    flex: 1;
+    padding: 1rem 2rem;
+}

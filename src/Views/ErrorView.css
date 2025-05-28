@@ -1,0 +1,51 @@
+.error-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+    background-color: #000;
+    color: #fff;
+}
+
+.error-content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+}
+
+.error-content h1 {
+    font-size: 8rem;
+    margin: 0;
+    color: #646cff;
+    text-shadow: 0 0 10px rgba(100, 108, 255, 0.5);
+}
+
+.error-content h2 {
+    font-size: 2rem;
+    margin: 20px 0;
+}
+
+.error-content p {
+    font-size: 1.2rem;
+    margin-bottom: 30px;
+    color: #888;
+}
+
+.error-button {
+    padding: 12px 24px;
+    background-color: #646cff;
+    color: #fff;
+    border: none;
+    border-radius: 5px;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background-color 0.3s, transform 0.2s;
+}
+
+.error-button:hover {
+    background-color: #535bf2;
+    transform: scale(1.05);
+}
