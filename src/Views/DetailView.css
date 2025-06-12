@@ -8,6 +8,27 @@
     margin: 0 auto;
 }
 
+.loading {
+    text-align: center;
+    font-size: 1.2rem;
+    color: #888;
+    padding: 2rem;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.error-message {
+    text-align: center;
+    color: #ff0000;
+    padding: 2rem;
+    font-size: 1.2rem;
+}
+
 .movie-content {
     display: flex;
     gap: 40px;
@@ -28,6 +49,55 @@
     font-size: 1.1rem;
     line-height: 1.6;
     margin-bottom: 30px;
+}
+
+.movie-metadata {
+    margin-bottom: 30px;
+}
+
+.movie-metadata p {
+    margin: 10px 0;
+}
+
+.movie-metadata strong {
+    color: #888;
+    margin-right: 10px;
+}
+
+.purchase-button {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    background-color: #646cff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: 20px;
+}
+
+.purchase-button:hover {
+    background-color: #535bf2;
+}
+
+.purchase-button.added {
+    background-color: #22c55e;
+}
+
+.purchase-button.added:hover {
+    background-color: #16a34a;
+}
+
+.purchase-status {
+    width: 100%;
+    padding: 1rem;
+    font-size: 1.1rem;
+    background-color: #22c55e;
+    color: white;
+    border-radius: 4px;
+    text-align: center;
+    margin-top: 20px;
 }
 
 .movie-poster {
@@ -56,6 +126,11 @@
     text-align: center;
 }
 
+.trailer-tile a {
+    text-decoration: none;
+    color: inherit;
+}
+
 .trailer-thumbnail {
     width: 100%;
     border-radius: 10px;
@@ -65,4 +140,10 @@
 
 .trailer-thumbnail:hover {
     transform: scale(1.05);
+}
+
+.trailer-tile h3 {
+    font-size: 1rem;
+    color: #fff;
+    margin: 10px 0;
 }

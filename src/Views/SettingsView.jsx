@@ -1,34 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../context/context';
+import { auth, firestore } from '../firebase';
+import { updateProfile, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { doc, updateDoc } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
 import './SettingsView.css';
 
 function SettingsView() {
     const navigate = useNavigate();
-    const {
-        firstName,
-        lastName,
-        email,
-        selectedGenres,
-        setFirst,
-        setLast,
-        setSelected,
-        loggedIn
-    } = useStoreContext();
+    const { user, selectedGenres, setSelectedGenres, purchases } = useStoreContext();
+    const [message, setMessage] = useState('');
+    const [loading, setLoading] = useState(false);
+    const isEmailUser = user?.providerData[0]?.providerId === 'password';
 
     const [formData, setFormData] = useState({
-        firstName: firstName,
-        lastName: lastName,
+        firstName: user?.displayName?.split(' ')[0] || '',
+        lastName: user?.displayName?.split(' ')[1] || '',
+        email: user?.email || '',
+        currentPassword: '',
+        newPassword: '',
+        confirmPassword: '',
         selectedGenres: selectedGenres
     });
 
     useEffect(() => {
-        if (!loggedIn) {
+        if (!user) {
             navigate('/login');
         }
-    }, [loggedIn, navigate]);
+    }, [user, navigate]);
 
     const genres = [
         { id: 878, name: "Sci-Fi" },
@@ -60,19 +61,62 @@ function SettingsView() {
         }));
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
+        setMessage('');
+        setLoading(true);
 
-        if (formData.selectedGenres.length < 5) {
-            alert("Please select at least 5 genres!");
-            return;
+        try {
+            if (formData.selectedGenres.length < 5) {
+                throw new Error("Please select at least 5 genres!");
+            }
+
+            if (isEmailUser) {
+                // Verify current password
+                if (formData.currentPassword) {
+                    const credential = EmailAuthProvider.credential(
+                        user.email,
+                        formData.currentPassword
+                    );
+                    await reauthenticateWithCredential(user, credential);
+
+                    // Update password if provided
+                    if (formData.newPassword) {
+                        if (formData.newPassword !== formData.confirmPassword) {
+                            throw new Error("New passwords don't match!");
+                        }
+                        await updatePassword(user, formData.newPassword);
+                    }
+
+                    // Update email if changed
+                    if (formData.email !== user.email) {
+                        await updateEmail(user, formData.email);
+                    }
+                }
+
+                // Update display name
+                const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+                if (fullName !== user.displayName) {
+                    await updateProfile(user, { displayName: fullName });
+                }
+            }
+
+            // Update Firestore data
+            const userRef = doc(firestore, 'users', user.uid);
+            await updateDoc(userRef, {
+                genres: formData.selectedGenres,
+                firstName: formData.firstName,
+                lastName: formData.lastName
+            });
+
+            setSelectedGenres(formData.selectedGenres);
+            setMessage('Settings updated successfully!');
+        } catch (error) {
+            console.error('Settings update error:', error);
+            setMessage(error.message);
+        } finally {
+            setLoading(false);
         }
-
-        setFirst(formData.firstName);
-        setLast(formData.lastName);
-        setSelected(formData.selectedGenres);
-
-        alert("Settings updated successfully!");
     };
 
     return (
@@ -80,14 +124,22 @@ function SettingsView() {
             <Header />
             <div className="settings-content">
                 <h2>Account Settings</h2>
+                {message && (
+                    <p className={message.includes('success') ? 'success-message' : 'error-message'}>
+                        {message}
+                    </p>
+                )}
+
                 <form onSubmit={handleSubmit} className="settings-form">
                     <div className="form-group">
                         <label>Email:</label>
                         <input
                             type="email"
-                            value={email}
-                            disabled
-                            className="disabled-input"
+                            name="email"
+                            value={formData.email}
+                            onChange={handleChange}
+                            disabled={!isEmailUser}
+                            className={!isEmailUser ? 'disabled-input' : ''}
                         />
                     </div>
 
@@ -98,7 +150,8 @@ function SettingsView() {
                             name="firstName"
                             value={formData.firstName}
                             onChange={handleChange}
-                            required
+                            disabled={!isEmailUser}
+                            className={!isEmailUser ? 'disabled-input' : ''}
                         />
                     </div>
 
@@ -109,9 +162,44 @@ function SettingsView() {
                             name="lastName"
                             value={formData.lastName}
                             onChange={handleChange}
-                            required
+                            disabled={!isEmailUser}
+                            className={!isEmailUser ? 'disabled-input' : ''}
                         />
                     </div>
+
+                    {isEmailUser && (
+                        <>
+                            <div className="form-group">
+                                <label>Current Password:</label>
+                                <input
+                                    type="password"
+                                    name="currentPassword"
+                                    value={formData.currentPassword}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>New Password:</label>
+                                <input
+                                    type="password"
+                                    name="newPassword"
+                                    value={formData.newPassword}
+                                    onChange={handleChange}
+                                />
+                            </div>
+
+                            <div className="form-group">
+                                <label>Confirm New Password:</label>
+                                <input
+                                    type="password"
+                                    name="confirmPassword"
+                                    value={formData.confirmPassword}
+                                    onChange={handleChange}
+                                />
+                            </div>
+                        </>
+                    )}
 
                     <div className="form-group">
                         <label>Preferred Genres (select at least 5):</label>
@@ -133,11 +221,31 @@ function SettingsView() {
                     <button
                         type="submit"
                         className="save-button"
-                        disabled={formData.selectedGenres.length < 5}
+                        disabled={loading || formData.selectedGenres.length < 5}
                     >
-                        Save Changes
+                        {loading ? 'Saving...' : 'Save Changes'}
                     </button>
                 </form>
+
+                <div className="purchases-section">
+                    <h3>Purchase History</h3>
+                    {purchases.length === 0 ? (
+                        <p>No purchases yet.</p>
+                    ) : (
+                        <div className="purchases-grid">
+                            {purchases.map(movie => (
+                                <div key={movie.id} className="purchase-item">
+                                    <img
+                                        src={`https://image.tmdb.org/t/p/w200${movie.poster_path}`}
+                                        alt={movie.title}
+                                        className="purchase-poster"
+                                    />
+                                    <h4>{movie.title}</h4>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
             <Footer />
         </div>

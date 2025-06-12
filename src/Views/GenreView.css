@@ -82,3 +82,17 @@
     background-color: #4a4a4a;
     cursor: not-allowed;
   }
+  
+  .purchased-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 8px;
+    background-color: #22c55e;
+    color: white;
+    text-align: center;
+    border-radius: 0 0 8px 8px;
+    font-size: 0.9rem;
+    opacity: 1;
+  }

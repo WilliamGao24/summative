@@ -30,4 +30,52 @@
 .genre-movies {
     flex: 1;
     padding: 1rem 2rem;
+    overflow-y: auto;
+}
+
+.no-genres-message {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    color: #888;
+    text-align: center;
+    padding: 2rem;
+    background-color: #1a1a1a;
+    margin: 2rem;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+.loading-message {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.2rem;
+    color: #888;
+    text-align: center;
+    padding: 2rem;
+    background-color: #1a1a1a;
+    margin: 2rem;
+    border-radius: 8px;
+    animation: fadeIn 0.3s ease-in;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@media (max-width: 768px) {
+    .genre-container {
+        flex-direction: column;
+    }
+
+    .genre-list {
+        width: 100%;
+        border-right: none;
+        border-bottom: 1px solid #444;
+    }
 }

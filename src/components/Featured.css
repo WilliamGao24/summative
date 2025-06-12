@@ -1,37 +1,130 @@
 .movie-container {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: 2rem;
-    padding: 2rem;
-    max-width: 80%;
+    padding: 0 2rem;
+    max-width: 1200px;
     margin: 0 auto;
-    background-color: #000;
-    color: #fff;
+}
+
+.movie-container.loading {
+    min-height: 400px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: #888;
+    font-size: 1.2rem;
+    animation: pulse 1.5s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
 }
 
 .movie-card {
+    position: relative;
     background-color: #1a1a1a;
-    border: 0.0625rem solid #444;
-    border-radius: 0.625rem;
-    padding: 1rem;
-    text-align: center;
-    box-shadow: 0 0.25rem 0.5rem rgba(0, 0, 0, 0.5);
-    transition: transform 0.3s ease;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: transform 0.3s;
+    text-decoration: none;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
 }
 
 .movie-card:hover {
-    transform: scale(1.05);
+    transform: translateY(-5px);
 }
 
 .movie-poster {
     width: 100%;
-    height: auto;
-    border-radius: 0.3125rem;
+    aspect-ratio: 2/3;
+    object-fit: cover;
+}
+
+.no-poster {
+    width: 100%;
+    aspect-ratio: 2/3;
+    background-color: #2a2a2a;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+}
+
+.movie-info {
+    padding: 1rem;
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+}
+
+.movie-info h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.movie-year {
+    color: #888;
+    margin: 0;
     margin-bottom: 1rem;
 }
 
-h1 {
-    font-size: 1rem;
-    margin: 0.625rem 0;
+.cart-button {
+    width: 100%;
+    padding: 0.75rem;
+    background-color: #646cff;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: background-color 0.3s;
+    margin-top: auto;
+}
+
+.cart-button:hover {
+    background-color: #535bf2;
+}
+
+.cart-button.added {
+    background-color: #22c55e;
+}
+
+.cart-button.added:hover {
+    background-color: #16a34a;
+}
+
+.purchase-badge {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 0.75rem;
+    background-color: #22c55e;
+    color: white;
+    text-align: center;
+    font-size: 0.9rem;
+}
+
+.featured-section {
+    padding: 2rem;
+    background-color: #000;
+}
+
+.featured-section h2 {
     color: #fff;
+    text-align: center;
+    margin-bottom: 2rem;
+    font-size: 2rem;
+}
+
+@media (max-width: 768px) {
+    .movie-container {
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        padding: 0 1rem;
+    }
 }

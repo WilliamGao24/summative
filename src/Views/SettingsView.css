@@ -20,10 +20,23 @@
     font-size: 2rem;
 }
 
+.error-message {
+    color: #ff0000;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.success-message {
+    color: #22c55e;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
 .settings-form {
     background-color: #1a1a1a;
     padding: 2rem;
     border-radius: 8px;
+    margin-bottom: 2rem;
 }
 
 .form-group {
@@ -83,11 +96,49 @@
     margin-top: 1rem;
 }
 
-.save-button:hover {
+.save-button:hover:not(:disabled) {
     background-color: #535bf2;
 }
 
 .save-button:disabled {
     background-color: #4a4a4a;
     cursor: not-allowed;
+}
+
+.purchases-section {
+    background-color: #1a1a1a;
+    padding: 2rem;
+    border-radius: 8px;
+    margin-top: 2rem;
+}
+
+.purchases-section h3 {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.purchases-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 1.5rem;
+}
+
+.purchase-item {
+    text-align: center;
+}
+
+.purchase-poster {
+    width: 100%;
+    border-radius: 4px;
+    margin-bottom: 0.5rem;
+    transition: transform 0.2s;
+}
+
+.purchase-poster:hover {
+    transform: scale(1.05);
+}
+
+.purchase-item h4 {
+    font-size: 1rem;
+    margin: 0.5rem 0;
 }

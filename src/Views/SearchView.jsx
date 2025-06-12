@@ -9,34 +9,19 @@ function SearchView() {
     const [movies, setMovies] = useState([]);
     const [page, setPage] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
     const [totalPages, setTotalPages] = useState(0);
-    const { cart, setCart } = useStoreContext();
+    const { cart, setCart, purchases } = useStoreContext();
 
-    const debouncedSearch = useCallback(
-        debounce(async (searchQuery, pageNum) => {
-            if (!searchQuery) return;
-
-            setLoading(true);
-            try {
-                const response = await axios.get(
-                    `https://api.themoviedb.org/3/search/movie?api_key=${import.meta.env.VITE_TMDB_KEY}&query=${searchQuery}&page=${pageNum}`
-                );
-                setMovies(response.data.results);
-                setTotalPages(response.data.total_pages);
-            } catch (error) {
-                console.error('Error searching movies:', error);
-            } finally {
-                setLoading(false);
-            }
-        }, 500),
-        []
-    );
-
-    useEffect(() => {
-        debouncedSearch(query, page);
-    }, [query, page, debouncedSearch]);
+    const isMoviePurchased = (movieId) => {
+        return purchases.some(purchase => purchase.id === movieId);
+    };
 
     const handleAddToCart = (movie) => {
+        if (isMoviePurchased(movie.id)) {
+            return;
+        }
+
         setCart(prevCart => {
             if (prevCart.has(movie.id)) {
                 return prevCart.delete(movie.id);
@@ -45,6 +30,35 @@ function SearchView() {
             }
         });
     };
+
+    const searchMovies = useCallback(async (searchQuery, pageNum) => {
+        if (!searchQuery) return;
+
+        setLoading(true);
+        setError(null);
+        try {
+            console.log(`Searching for "${searchQuery}" on page ${pageNum}`);
+            const response = await axios.get(
+                `https://api.themoviedb.org/3/search/movie?api_key=${import.meta.env.VITE_TMDB_KEY}&query=${searchQuery}&page=${pageNum}`
+            );
+            console.log('Search results:', response.data);
+            setMovies(response.data.results);
+            setTotalPages(response.data.total_pages);
+        } catch (error) {
+            console.error('Error searching movies:', error);
+            setError('Failed to search movies. Please try again later.');
+        } finally {
+            setLoading(false);
+        }
+    }, []);
+
+    useEffect(() => {
+        searchMovies(query, page);
+    }, [query, page, searchMovies]);
+
+    if (error) {
+        return <div className="error-message">{error}</div>;
+    }
 
     return (
         <div className="search-view">
@@ -69,12 +83,17 @@ function SearchView() {
                                     <div className="movie-info">
                                         <h3>{movie.title}</h3>
                                         <p>{movie.release_date?.split('-')[0]}</p>
-                                        <button
-                                            className={`cart-button ${cart.has(movie.id) ? 'added' : ''}`}
-                                            onClick={() => handleAddToCart(movie)}
-                                        >
-                                            {cart.has(movie.id) ? 'Added' : 'Buy'}
-                                        </button>
+                                        {!isMoviePurchased(movie.id) && (
+                                            <button
+                                                className={`cart-button ${cart.has(movie.id) ? 'added' : ''}`}
+                                                onClick={() => handleAddToCart(movie)}
+                                            >
+                                                {cart.has(movie.id) ? 'Added' : 'Buy'}
+                                            </button>
+                                        )}
+                                        {isMoviePurchased(movie.id) && (
+                                            <div className="purchased-badge">Purchased</div>
+                                        )}
                                     </div>
                                 </div>
                             ))
@@ -86,14 +105,14 @@ function SearchView() {
                         <div className="pagination">
                             <button
                                 onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1}
+                                disabled={page === 1 || loading}
                             >
                                 Previous
                             </button>
                             <span>Page {page} of {totalPages}</span>
                             <button
                                 onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages}
+                                disabled={page === totalPages || loading}
                             >
                                 Next
                             </button>
@@ -103,18 +122,6 @@ function SearchView() {
             )}
         </div>
     );
-}
-
-function debounce(func, wait) {
-    let timeout;
-    return function executedFunction(...args) {
-        const later = () => {
-            clearTimeout(timeout);
-            func(...args);
-        };
-        clearTimeout(timeout);
-        timeout = setTimeout(later, wait);
-    };
 }
 
 export default SearchView;

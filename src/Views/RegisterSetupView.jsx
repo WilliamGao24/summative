@@ -1,20 +1,19 @@
-import "./RegisterView.css";
-import Header from "../components/Header";
-import { Link, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../context/context';
 import { auth, firestore } from '../firebase';
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
+import Header from '../components/Header';
 import Footer from '../components/Footer';
+import "./RegisterView.css";
 
-function RegisterView() {
+function RegisterSetupView() {
     const navigate = useNavigate();
     const { setUser, setSelectedGenres } = useStoreContext();
+    const [registrationData, setRegistrationData] = useState(null);
+    
     const [formData, setFormData] = useState({
-        firstName: '',
-        lastName: '',
-        email: '',
         password: '',
         confirmPassword: '',
         genres: []
@@ -22,6 +21,15 @@ function RegisterView() {
 
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const savedData = sessionStorage.getItem('registrationData');
+        if (!savedData) {
+            navigate('/register');
+            return;
+        }
+        setRegistrationData(JSON.parse(savedData));
+    }, [navigate]);
 
     const genres = [
         { id: 878, name: "Sci-Fi" },
@@ -53,26 +61,23 @@ function RegisterView() {
         }));
     };
 
-    const createUserDocument = async (user, data) => {
+    const createUserDocument = async (user) => {
+        if (!user || !registrationData) return;
+
         const userRef = doc(firestore, 'users', user.uid);
         await setDoc(userRef, {
-            email: data.email,
-            firstName: data.firstName,
-            lastName: data.lastName,
-            genres: data.genres,
+            email: registrationData.email,
+            firstName: registrationData.firstName,
+            lastName: registrationData.lastName,
+            genres: formData.genres,
             createdAt: new Date(),
             purchases: []
         });
     };
 
-    const handleEmailRegister = async (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
         setError('');
-        
-        if (!formData.firstName || !formData.lastName || !formData.email || !formData.password || !formData.confirmPassword) {
-            setError('Please fill in all fields');
-            return;
-        }
 
         if (formData.genres.length < 5) {
             setError("Please select at least 5 genres!");
@@ -88,18 +93,19 @@ function RegisterView() {
         try {
             const { user } = await createUserWithEmailAndPassword(
                 auth,
-                formData.email,
+                registrationData.email,
                 formData.password
             );
 
             await updateProfile(user, {
-                displayName: `${formData.firstName} ${formData.lastName}`
+                displayName: `${registrationData.firstName} ${registrationData.lastName}`
             });
 
-            await createUserDocument(user, formData);
+            await createUserDocument(user);
 
             setUser(user);
             setSelectedGenres(formData.genres);
+            sessionStorage.removeItem('registrationData');
 
             if (formData.genres.length > 0) {
                 navigate(`/movies/genre/${formData.genres[0]}`);
@@ -123,84 +129,19 @@ function RegisterView() {
         }
     };
 
-    const handleGoogleRegister = async () => {
-        setError('');
-        setLoading(true);
-
-        try {
-            const provider = new GoogleAuthProvider();
-            const result = await signInWithPopup(auth, provider);
-            
-            // Create user document with Google data
-            const names = result.user.displayName?.split(' ') || ['', ''];
-            const userData = {
-                email: result.user.email,
-                firstName: names[0],
-                lastName: names[1] || '',
-                genres: [],
-                createdAt: new Date(),
-                purchases: []
-            };
-
-            await createUserDocument(result.user, userData);
-            setUser(result.user);
-            navigate('/settings'); // Direct to settings to select genres
-        } catch (error) {
-            console.error('Google registration error:', error);
-            if (error.code === 'auth/popup-closed-by-user') {
-                setError('Registration cancelled.');
-            } else {
-                setError('An error occurred during registration. Please try again.');
-            }
-        } finally {
-            setLoading(false);
-        }
-    };
+    if (!registrationData) {
+        return null;
+    }
 
     return (
         <div className="register-container">
             <Header />
             <div className="form-container">
-                <h2>Create an Account</h2>
+                <h2>Complete Your Registration</h2>
+                <p className="step-indicator">Step 2 of 2: Account Setup</p>
                 {error && <p className="error-message">{error}</p>}
 
-                <form onSubmit={handleEmailRegister}>
-                    <div className="input-group">
-                        <label>First Name:</label>
-                        <input
-                            type="text"
-                            name="firstName"
-                            value={formData.firstName}
-                            onChange={handleChange}
-                            required
-                            disabled={loading}
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label>Last Name:</label>
-                        <input
-                            type="text"
-                            name="lastName"
-                            value={formData.lastName}
-                            onChange={handleChange}
-                            required
-                            disabled={loading}
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label>Email:</label>
-                        <input
-                            type="email"
-                            name="email"
-                            value={formData.email}
-                            onChange={handleChange}
-                            required
-                            disabled={loading}
-                        />
-                    </div>
-
+                <form onSubmit={handleSubmit}>
                     <div className="input-group">
                         <label>Password:</label>
                         <input
@@ -248,27 +189,20 @@ function RegisterView() {
                     <button
                         type="submit"
                         className="register-button"
-                        disabled={loading || !formData.email || !formData.password || formData.genres.length < 5}
+                        disabled={
+                            loading ||
+                            !formData.password ||
+                            !formData.confirmPassword ||
+                            formData.genres.length < 5
+                        }
                     >
-                        {loading ? 'Creating Account...' : 'Register'}
+                        {loading ? 'Creating Account...' : 'Complete Registration'}
                     </button>
                 </form>
-
-                <button
-                    onClick={handleGoogleRegister}
-                    className="google-button"
-                    disabled={loading}
-                >
-                    {loading ? 'Creating Account...' : 'Register with Google'}
-                </button>
-
-                <p className="login-link">
-                    Already have an account? <Link to="/login">Login</Link>
-                </p>
             </div>
             <Footer />
         </div>
     );
 }
 
-export default RegisterView;
+export default RegisterSetupView;
