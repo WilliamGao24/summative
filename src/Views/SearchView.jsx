@@ -88,7 +88,7 @@ function SearchView() {
                                                 className={`cart-button ${cart.has(movie.id) ? 'added' : ''}`}
                                                 onClick={() => handleAddToCart(movie)}
                                             >
-                                                {cart.has(movie.id) ? 'Added' : 'Buy'}
+                                                {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                                             </button>
                                         )}
                                         {isMoviePurchased(movie.id) && (

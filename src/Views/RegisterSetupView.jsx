@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../context/context';
-import { auth, firestore } from '../firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { firestore } from '../firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -12,10 +11,7 @@ function RegisterSetupView() {
     const navigate = useNavigate();
     const { setUser, setSelectedGenres } = useStoreContext();
     const [registrationData, setRegistrationData] = useState(null);
-    
     const [formData, setFormData] = useState({
-        password: '',
-        confirmPassword: '',
         genres: []
     });
 
@@ -44,14 +40,6 @@ function RegisterSetupView() {
         { id: 35, name: "Comedy" }
     ];
 
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prev => ({
-            ...prev,
-            [name]: value
-        }));
-    };
-
     const handleGenreChange = (id) => {
         setFormData(prev => ({
             ...prev,
@@ -61,10 +49,10 @@ function RegisterSetupView() {
         }));
     };
 
-    const createUserDocument = async (user) => {
-        if (!user || !registrationData) return;
+    const createUserDocument = async () => {
+        if (!registrationData) return;
 
-        const userRef = doc(firestore, 'users', user.uid);
+        const userRef = doc(firestore, 'users', registrationData.uid);
         await setDoc(userRef, {
             email: registrationData.email,
             firstName: registrationData.firstName,
@@ -79,51 +67,26 @@ function RegisterSetupView() {
         event.preventDefault();
         setError('');
 
-        if (formData.genres.length < 5) {
-            setError("Please select at least 5 genres!");
-            return;
-        }
-
-        if (formData.password !== formData.confirmPassword) {
-            setError("Passwords don't match!");
+        if (formData.genres.length < genres.length) {
+            setError("Please select all genres to complete registration!");
             return;
         }
 
         setLoading(true);
         try {
-            const { user } = await createUserWithEmailAndPassword(
-                auth,
-                registrationData.email,
-                formData.password
-            );
+            await createUserDocument();
 
-            await updateProfile(user, {
-                displayName: `${registrationData.firstName} ${registrationData.lastName}`
-            });
-
-            await createUserDocument(user);
-
-            setUser(user);
+            // Set user genres
             setSelectedGenres(formData.genres);
+            
+            // Clean up
             sessionStorage.removeItem('registrationData');
 
-            if (formData.genres.length > 0) {
-                navigate(`/movies/genre/${formData.genres[0]}`);
-            } else {
-                navigate('/settings');
-            }
+            // Navigate to first selected genre
+            navigate(`/movies/genre/${formData.genres[0]}`);
         } catch (error) {
-            console.error("Registration error:", error);
-            switch (error.code) {
-                case 'auth/email-already-in-use':
-                    setError('Email already registered!');
-                    break;
-                case 'auth/weak-password':
-                    setError('Password should be at least 6 characters!');
-                    break;
-                default:
-                    setError(error.message);
-            }
+            console.error("Registration completion error:", error);
+            setError('An error occurred while completing registration. Please try again.');
         } finally {
             setLoading(false);
         }
@@ -138,38 +101,12 @@ function RegisterSetupView() {
             <Header />
             <div className="form-container">
                 <h2>Complete Your Registration</h2>
-                <p className="step-indicator">Step 2 of 2: Account Setup</p>
+                <p className="step-indicator">Final Step: Select Your Genres</p>
                 {error && <p className="error-message">{error}</p>}
 
                 <form onSubmit={handleSubmit}>
-                    <div className="input-group">
-                        <label>Password:</label>
-                        <input
-                            type="password"
-                            name="password"
-                            value={formData.password}
-                            onChange={handleChange}
-                            required
-                            minLength={6}
-                            disabled={loading}
-                        />
-                    </div>
-
-                    <div className="input-group">
-                        <label>Confirm Password:</label>
-                        <input
-                            type="password"
-                            name="confirmPassword"
-                            value={formData.confirmPassword}
-                            onChange={handleChange}
-                            required
-                            minLength={6}
-                            disabled={loading}
-                        />
-                    </div>
-
                     <div className="genres-section">
-                        <label>Select at least 5 genres:</label>
+                        <label>Select all genres to continue ({formData.genres.length}/{genres.length}):</label>
                         <div className="genres-grid">
                             {genres.map(genre => (
                                 <div key={genre.id} className="genre-item">
@@ -189,14 +126,9 @@ function RegisterSetupView() {
                     <button
                         type="submit"
                         className="register-button"
-                        disabled={
-                            loading ||
-                            !formData.password ||
-                            !formData.confirmPassword ||
-                            formData.genres.length < 5
-                        }
+                        disabled={loading || formData.genres.length < genres.length}
                     >
-                        {loading ? 'Creating Account...' : 'Complete Registration'}
+                        {loading ? 'Completing Registration...' : 'Complete Registration'}
                     </button>
                 </form>
             </div>

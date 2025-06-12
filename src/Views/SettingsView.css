@@ -142,3 +142,26 @@
     font-size: 1rem;
     margin: 0.5rem 0;
 }
+
+.navigation-buttons {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.nav-btn {
+    padding: 0.4rem 0.8rem;
+    background-color: transparent;
+    color: #888;
+    border: 1px solid #444;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+}
+
+.nav-btn:hover {
+    background-color: #2a2a2a;
+    color: #fff;
+    border-color: #646cff;
+}

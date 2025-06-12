@@ -99,7 +99,7 @@ function GenreView() {
                     className={`buy-button ${cart.has(movie.id) ? 'added' : ''}`}
                     onClick={(e) => handleAddToCart(movie, e)}
                   >
-                    {cart.has(movie.id) ? 'Added' : 'Buy'}
+                    {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                   </button>
                 )}
                 {isMoviePurchased(movie.id) && (

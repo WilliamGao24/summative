@@ -1,6 +1,5 @@
 import axios from "axios";
 import { useEffect, useState } from "react";
-import { Link } from 'react-router-dom';
 import './Featured.css';
 
 function Featured() {
@@ -67,7 +66,7 @@ function Featured() {
             <h2>Featured Movies</h2>
             <div className="movie-container">
                 {movies.map(movie => (
-                    <Link to={`/movies/details/${movie.id}`} key={movie.id} className="movie-card">
+                    <div key={movie.id} className="movie-card">
                         {movie.poster_path ? (
                             <img
                                 className="movie-poster"
@@ -81,7 +80,7 @@ function Featured() {
                             <h3>{movie.title}</h3>
                             <p className="movie-year">{movie.release_date?.split('-')[0]}</p>
                         </div>
-                    </Link>
+                    </div>
                 ))}
             </div>
         </div>

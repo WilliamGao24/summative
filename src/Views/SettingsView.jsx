@@ -119,10 +119,18 @@ function SettingsView() {
         }
     };
 
+    // Add navigation buttons layout
+    const navigationButtons = (
+        <div className="navigation-buttons">
+            <button onClick={() => navigate(-1)} className="nav-btn">Back</button>
+        </div>
+    );
+
     return (
         <div className="settings-container">
             <Header />
             <div className="settings-content">
+                {navigationButtons}
                 <h2>Account Settings</h2>
                 {message && (
                     <p className={message.includes('success') ? 'success-message' : 'error-message'}>

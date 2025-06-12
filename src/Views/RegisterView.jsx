@@ -4,8 +4,8 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useStoreContext } from '../context/context';
 import { auth, firestore } from '../firebase';
-import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, updateProfile, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { doc, setDoc, getDoc } from 'firebase/firestore';
 import Footer from '../components/Footer';
 
 function RegisterView() {
@@ -127,9 +127,24 @@ function RegisterView() {
         setError('');
         setLoading(true);
 
+        // Check for genre selection first
+        if (formData.genres.length < 5) {
+            setError("Please select at least 5 genres before registering!");
+            setLoading(false);
+            return;
+        }
+
         try {
             const provider = new GoogleAuthProvider();
             const result = await signInWithPopup(auth, provider);
+            
+            // Check if user already exists in Firestore
+            const userRef = doc(firestore, 'users', result.user.uid);
+            const userDoc = await getDoc(userRef);
+            
+            if (userDoc.exists()) {
+                throw new Error('This Google account is already registered. Please use the login page instead.');
+            }
             
             // Create user document with Google data
             const names = result.user.displayName?.split(' ') || ['', ''];
@@ -137,21 +152,28 @@ function RegisterView() {
                 email: result.user.email,
                 firstName: names[0],
                 lastName: names[1] || '',
-                genres: [],
+                genres: formData.genres,
                 createdAt: new Date(),
                 purchases: []
             };
 
             await createUserDocument(result.user, userData);
             setUser(result.user);
-            navigate('/settings'); // Direct to settings to select genres
+            setSelectedGenres(formData.genres);
+
+            // Navigate to the first selected genre
+            navigate(`/movies/genre/${formData.genres[0]}`);
         } catch (error) {
             console.error('Google registration error:', error);
             if (error.code === 'auth/popup-closed-by-user') {
                 setError('Registration cancelled.');
+            } else if (error.message.includes('already registered')) {
+                setError(error.message);
             } else {
                 setError('An error occurred during registration. Please try again.');
             }
+            // Sign out the user if there was an error during registration
+            await signOut(auth);
         } finally {
             setLoading(false);
         }
@@ -228,7 +250,7 @@ function RegisterView() {
                     </div>
 
                     <div className="genres-section">
-                        <label>Select at least 5 genres:</label>
+                        <label>Select at least 5 genres to continue ({formData.genres.length}/5):</label>
                         <div className="genres-grid">
                             {genres.map(genre => (
                                 <div key={genre.id} className="genre-item">
@@ -257,7 +279,7 @@ function RegisterView() {
                 <button
                     onClick={handleGoogleRegister}
                     className="google-button"
-                    disabled={loading}
+                    disabled={loading || formData.genres.length < 5}
                 >
                     {loading ? 'Creating Account...' : 'Register with Google'}
                 </button>

@@ -82,7 +82,7 @@ function DetailMovieView() {
                             className={`purchase-button ${cart.has(movie.id) ? 'added' : ''}`}
                             onClick={handleAddToCart}
                         >
-                            {cart.has(movie.id) ? 'Added to Cart' : 'Add to Cart - $14.99'}
+                            {cart.has(movie.id) ? 'Added to Cart' : 'Add to Cart'}
                         </button>
                     ) : (
                         <div className="purchase-status">You own this movie</div>

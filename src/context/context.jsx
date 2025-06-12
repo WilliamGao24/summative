@@ -11,31 +11,35 @@ export const StoreProvider = ({ children }) => {
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [cart, setCart] = useState(() => Map());
     const [purchases, setPurchases] = useState([]);
+    const [loading, setLoading] = useState(true); // Add loading state
 
-    // Load cart from Firestore when user logs in
+    // Load user data and handle auth state
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-            if (currentUser) {
-                const userDoc = await getDoc(doc(firestore, 'users', currentUser.uid));
-                if (userDoc.exists()) {
-                    const userData = userDoc.data();
-                    if (userData.genres) {
-                        setSelectedGenres(userData.genres);
+            try {
+                if (currentUser) {
+                    // User is signed in
+                    const userDoc = await getDoc(doc(firestore, 'users', currentUser.uid));
+                    if (userDoc.exists()) {
+                        const userData = userDoc.data();
+                        setSelectedGenres(userData.genres || []);
+                        setPurchases(userData.purchases || []);
+                        if (userData.cart) {
+                            setCart(Map(userData.cart));
+                        }
                     }
-                    if (userData.purchases) {
-                        setPurchases(userData.purchases);
-                    }
-                    // Load cart data if it exists
-                    if (userData.cart) {
-                        setCart(Map(userData.cart));
-                    }
+                    setUser(currentUser);
+                } else {
+                    // User is signed out
+                    setUser(null);
+                    setSelectedGenres([]);
+                    setCart(Map());
+                    setPurchases([]);
                 }
-                setUser(currentUser);
-            } else {
-                setUser(null);
-                setSelectedGenres([]);
-                setCart(Map());
-                setPurchases([]);
+            } catch (error) {
+                console.error('Error loading user data:', error);
+            } finally {
+                setLoading(false);
             }
         });
 
@@ -80,17 +84,24 @@ export const StoreProvider = ({ children }) => {
         }
     }, [purchases, user]);
 
+    const contextValue = {
+        user,
+        setUser,
+        selectedGenres,
+        setSelectedGenres,
+        cart,
+        setCart,
+        purchases,
+        setPurchases,
+        loading // Add loading to context value
+    };
+
+    if (loading) {
+        return null; // or return a loading spinner
+    }
+
     return (
-        <StoreContext.Provider value={{
-            user,
-            setUser,
-            selectedGenres,
-            setSelectedGenres,
-            cart,
-            setCart,
-            purchases,
-            setPurchases
-        }}>
+        <StoreContext.Provider value={contextValue}>
             {children}
         </StoreContext.Provider>
     );

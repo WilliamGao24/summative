@@ -6,8 +6,10 @@ import { Map } from 'immutable';
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 import "./CartView.css";
+import { useNavigate } from 'react-router-dom';
 
 function CartView() {
+    const navigate = useNavigate();
     const { user, cart, setCart, purchases, setPurchases } = useStoreContext();
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
@@ -59,10 +61,18 @@ function CartView() {
         }
     };
 
+    // Add navigation buttons layout
+    const navigationButtons = (
+        <div className="navigation-buttons">
+            <button onClick={() => navigate(-1)} className="nav-btn">Back</button>
+        </div>
+    );
+
     return (
         <div className="cart-container">
             <Header />
             <div className="cart-content">
+                {navigationButtons}
                 <h2>Shopping Cart</h2>
                 {message && (
                     <p className={message.includes('error') ? 'error-message' : 'success-message'}>
@@ -84,7 +94,6 @@ function CartView() {
                                     />
                                     <div className="cart-item-details">
                                         <h3>{movie.title}</h3>
-                                        <p className="movie-price">$14.99</p>
                                         <button 
                                             className="remove-button"
                                             onClick={() => handleRemove(movie.id)}
@@ -98,16 +107,12 @@ function CartView() {
                         </div>
                         {cart.size > 0 && (
                             <div className="cart-summary">
-                                <div className="cart-total">
-                                    <span>Total:</span>
-                                    <span>${(cart.size * 14.99).toFixed(2)}</span>
-                                </div>
                                 <button 
                                     className="checkout-button"
                                     onClick={handleCheckout}
                                     disabled={loading}
                                 >
-                                    {loading ? 'Processing...' : 'Proceed to Checkout'}
+                                    {loading ? 'Processing...' : 'Complete Purchase'}
                                 </button>
                             </div>
                         )}

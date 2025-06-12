@@ -46,16 +46,19 @@ function Header() {
     // Extract and format user name if available
     const formatUserName = () => {
         if (user?.displayName) {
-            // If there's a display name, use it
-            return user.displayName;
+            const names = user.displayName.split(' ');
+            // If there's both first and last name, use first name + last initial
+            if (names.length > 1) {
+                return `${names[0]} ${names[1].charAt(0)}.`;
+            }
+            // Otherwise just use the first name
+            return names[0];
         } else if (user?.email) {
-            // If no display name but email exists, format the email
+            // If no display name but email exists, use part before @ and capitalize
             const name = user.email.split('@')[0];
-            // Capitalize first letter and replace dots/underscores with spaces
-            return name.charAt(0).toUpperCase() + 
-                   name.slice(1).replace(/[._]/g, ' ');
+            return name.charAt(0).toUpperCase() + name.slice(1).replace(/[._]/g, ' ');
         }
-        return 'User'; // Fallback
+        return 'Guest';
     };
 
     return (
@@ -78,6 +81,7 @@ function Header() {
                         <span className="welcome-message">
                             Welcome, {formatUserName()}
                         </span>
+                        <Link to="/movies" className="nav-button">Movies</Link>
                         <Link to="/cart" className="nav-button">
                             Cart {cart.size > 0 && `(${cart.size})`}
                         </Link>
