@@ -11,7 +11,7 @@ export const StoreProvider = ({ children }) => {
     const [selectedGenres, setSelectedGenres] = useState([]);
     const [cart, setCart] = useState(() => Map());
     const [purchases, setPurchases] = useState([]);
-    const [loading, setLoading] = useState(true); // Add loading state
+    const [loading, setLoading] = useState(true);
 
     // Load user data and handle auth state
     useEffect(() => {
@@ -24,8 +24,20 @@ export const StoreProvider = ({ children }) => {
                         const userData = userDoc.data();
                         setSelectedGenres(userData.genres || []);
                         setPurchases(userData.purchases || []);
+                        
+                        // Load cart from Firestore and filter out purchased items
                         if (userData.cart) {
-                            setCart(Map(userData.cart));
+                            const purchases = userData.purchases || [];
+                            const cartData = {};
+                            Object.entries(userData.cart).forEach(([key, value]) => {
+                                // Only include items that exist and haven't been purchased
+                                if (value && value.id && !purchases.some(p => p.id === value.id)) {
+                                    cartData[key] = value;
+                                }
+                            });
+                            setCart(Map(cartData));
+                        } else {
+                            setCart(Map());
                         }
                     }
                     setUser(currentUser);
@@ -38,6 +50,9 @@ export const StoreProvider = ({ children }) => {
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
+                setCart(Map());
+                setPurchases([]);
+                setSelectedGenres([]);
             } finally {
                 setLoading(false);
             }
@@ -45,6 +60,29 @@ export const StoreProvider = ({ children }) => {
 
         return () => unsubscribe();
     }, []);
+
+    // Update Firestore whenever cart changes
+    useEffect(() => {
+        const persistCart = async () => {
+            if (user?.uid) {
+                try {
+                    const userRef = doc(firestore, 'users', user.uid);
+                    const cartObject = {};
+                    cart.forEach((value, key) => {
+                        if (value && value.id && !purchases.some(p => p.id === value.id)) {
+                            cartObject[key] = value;
+                        }
+                    });
+                    
+                    await setDoc(userRef, { cart: cartObject }, { merge: true });
+                } catch (error) {
+                    console.error('Error persisting cart:', error);
+                }
+            }
+        };
+        
+        persistCart();
+    }, [cart, user, purchases]);
 
     // Update Firestore whenever genres change
     useEffect(() => {
@@ -61,22 +99,7 @@ export const StoreProvider = ({ children }) => {
         }
     }, [selectedGenres, user]);
 
-    // Persist cart to Firestore
-    useEffect(() => {
-        if (user?.uid) {
-            const userRef = doc(firestore, 'users', user.uid);
-            const updateCart = async () => {
-                try {
-                    await setDoc(userRef, { cart: cart.toJS() }, { merge: true });
-                } catch (error) {
-                    console.error('Error updating cart:', error);
-                }
-            };
-            updateCart();
-        }
-    }, [cart, user]);
-
-    // Persist purchases to Firestore
+    // Update Firestore whenever purchases change
     useEffect(() => {
         if (user?.uid && purchases.length > 0) {
             const userRef = doc(firestore, 'users', user.uid);
@@ -93,11 +116,11 @@ export const StoreProvider = ({ children }) => {
         setCart,
         purchases,
         setPurchases,
-        loading // Add loading to context value
+        loading
     };
 
     if (loading) {
-        return null; // or return a loading spinner
+        return null;
     }
 
     return (

@@ -31,11 +31,11 @@
     border: none;
     border-radius: 0 0 8px 8px;
     cursor: pointer;
-    transition: background-color 0.3s ease;
+    transition: all 0.3s ease;
     opacity: 0;
   }
   
-  .genre-view-item:hover .buy-button {
+  .genre-view-item:hover .buy-button:not(.added) {
     opacity: 1;
   }
   

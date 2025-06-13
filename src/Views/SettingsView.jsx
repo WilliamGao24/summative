@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useStoreContext } from '../context/context';
 import { auth, firestore } from '../firebase';
-import { updateProfile, updateEmail, updatePassword, EmailAuthProvider, reauthenticateWithCredential } from 'firebase/auth';
+import { updateProfile, updateEmail, updatePassword } from 'firebase/auth';
 import { doc, updateDoc } from 'firebase/firestore';
 import Header from '../components/Header';
 import Footer from '../components/Footer';
@@ -19,7 +19,6 @@ function SettingsView() {
         firstName: user?.displayName?.split(' ')[0] || '',
         lastName: user?.displayName?.split(' ')[1] || '',
         email: user?.email || '',
-        currentPassword: '',
         newPassword: '',
         confirmPassword: '',
         selectedGenres: selectedGenres
@@ -65,6 +64,11 @@ function SettingsView() {
         e.preventDefault();
         setMessage('');
         setLoading(true);
+        // Clear password fields at the start of submission
+        const clearedPasswords = {
+            newPassword: '',
+            confirmPassword: ''
+        };
 
         try {
             if (formData.selectedGenres.length < 5) {
@@ -72,26 +76,15 @@ function SettingsView() {
             }
 
             if (isEmailUser) {
-                // Verify current password
-                if (formData.currentPassword) {
-                    const credential = EmailAuthProvider.credential(
-                        user.email,
-                        formData.currentPassword
-                    );
-                    await reauthenticateWithCredential(user, credential);
-
-                    // Update password if provided
-                    if (formData.newPassword) {
-                        if (formData.newPassword !== formData.confirmPassword) {
-                            throw new Error("New passwords don't match!");
-                        }
-                        await updatePassword(user, formData.newPassword);
+                if (formData.newPassword) {
+                    if (formData.newPassword !== formData.confirmPassword) {
+                        throw new Error("New passwords don't match!");
                     }
+                    await updatePassword(user, formData.newPassword);
+                }
 
-                    // Update email if changed
-                    if (formData.email !== user.email) {
-                        await updateEmail(user, formData.email);
-                    }
+                if (formData.email !== user.email) {
+                    await updateEmail(user, formData.email);
                 }
 
                 // Update display name
@@ -116,6 +109,11 @@ function SettingsView() {
             setMessage(error.message);
         } finally {
             setLoading(false);
+            // Clear password fields and update form data
+            setFormData(prev => ({
+                ...prev,
+                ...clearedPasswords
+            }));
         }
     };
 
@@ -177,16 +175,6 @@ function SettingsView() {
 
                     {isEmailUser && (
                         <>
-                            <div className="form-group">
-                                <label>Current Password:</label>
-                                <input
-                                    type="password"
-                                    name="currentPassword"
-                                    value={formData.currentPassword}
-                                    onChange={handleChange}
-                                />
-                            </div>
-
                             <div className="form-group">
                                 <label>New Password:</label>
                                 <input

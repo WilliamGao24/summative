@@ -20,17 +20,21 @@ function RouteHandler({ children }) {
     const location = useLocation();
 
     useEffect(() => {
-        // Store the current path in session storage
-        sessionStorage.setItem('lastPath', location.pathname + location.search);
+        // Only store path if it's not from a back/forward navigation
+        if (!location.key) {
+            sessionStorage.setItem('lastPath', location.pathname + location.search);
+        }
     }, [location]);
 
     useEffect(() => {
-        // On mount, check if there's a stored path and navigate to it
-        const lastPath = sessionStorage.getItem('lastPath');
-        if (lastPath && lastPath !== '/') {
-            navigate(lastPath);
+        // Only navigate on initial mount if there's no location key
+        if (!location.key) {
+            const lastPath = sessionStorage.getItem('lastPath');
+            if (lastPath && lastPath !== '/' && lastPath !== location.pathname) {
+                navigate(lastPath, { replace: true });
+            }
         }
-    }, [navigate]);
+    }, [navigate, location.key, location.pathname]);
 
     return children;
 }

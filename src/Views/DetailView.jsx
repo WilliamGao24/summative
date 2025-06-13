@@ -21,11 +21,11 @@ function DetailMovieView() {
         }
 
         setCart(prevCart => {
-            if (prevCart.has(movie.id)) {
-                return prevCart.delete(movie.id);
-            } else {
-                return prevCart.set(movie.id, movie);
-            }
+            const newCart = prevCart.set(movie.id, {
+                ...movie,
+                id: movie.id // Ensure ID is consistently stored
+            });
+            return newCart;
         });
     };
 
