@@ -107,7 +107,7 @@ function GenreView() {
                       handleAddToCart(movie, e);
                     }}
                   >
-                    {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
+                    {cart.has(movie.id) ? 'Added to Cart' : 'Add to Cart'}
                   </button>
                 )}
                 {isMoviePurchased(movie.id) && (
