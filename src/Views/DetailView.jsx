@@ -9,23 +9,27 @@ function DetailMovieView() {
     const [movie, setMovie] = useState(null);
     const [loading, setLoading] = useState(true);
     const { id } = useParams();
-    const { cart, setCart, purchases } = useStoreContext();
+    const { cart, setCart, purchases, cartLoading } = useStoreContext();
 
     const isMoviePurchased = (movieId) => {
         return purchases.some(purchase => purchase.id === Number(movieId));
     };
 
+    const isMoviePurchasedOrInCart = (movieId) => {
+        return isMoviePurchased(movieId) || cart.has(movieId);
+    };
+
     const handleAddToCart = () => {
-        if (!movie || isMoviePurchased(movie.id)) {
+        if (!movie || isMoviePurchasedOrInCart(movie.id)) {
             return;
         }
 
         setCart(prevCart => {
-            const newCart = prevCart.set(movie.id, {
+            const movieData = {
                 ...movie,
-                id: movie.id // Ensure ID is consistently stored
-            });
-            return newCart;
+                id: movie.id
+            };
+            return prevCart.set(movie.id, movieData);
         });
     };
 
@@ -52,7 +56,7 @@ function DetailMovieView() {
         fetchMovieDetails();
     }, [id]);
 
-    if (loading) {
+    if (loading || cartLoading) {
         return <div className="loading">Loading...</div>;
     }
 
@@ -77,15 +81,17 @@ function DetailMovieView() {
                         )}
                     </div>
 
-                    {!isMoviePurchased(movie.id) ? (
+                    {!isMoviePurchasedOrInCart(movie.id) ? (
                         <button 
                             className={`purchase-button ${cart.has(movie.id) ? 'added' : ''}`}
                             onClick={handleAddToCart}
                         >
-                            {cart.has(movie.id) ? 'Added to Cart' : 'Add to Cart'}
+                            {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                         </button>
                     ) : (
-                        <div className="purchase-status">You own this movie</div>
+                        <div className="purchase-status">
+                            {isMoviePurchased(movie.id) ? 'You own this movie' : 'Added to Cart'}
+                        </div>
                     )}
                 </div>
                 {movie.poster_path && (

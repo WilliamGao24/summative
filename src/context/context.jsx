@@ -2,7 +2,7 @@ import { createContext, useState, useContext, useEffect } from "react";
 import { Map } from 'immutable';
 import { auth, firestore } from '../firebase';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 
 export const StoreContext = createContext();
 
@@ -12,37 +12,31 @@ export const StoreProvider = ({ children }) => {
     const [cart, setCart] = useState(() => Map());
     const [purchases, setPurchases] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [cartLoading, setCartLoading] = useState(true);
 
-    // Load user data and handle auth state
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
             try {
                 if (currentUser) {
-                    // User is signed in
                     const userDoc = await getDoc(doc(firestore, 'users', currentUser.uid));
                     if (userDoc.exists()) {
                         const userData = userDoc.data();
                         setSelectedGenres(userData.genres || []);
                         setPurchases(userData.purchases || []);
+
+                        const firestoreCart = userData.cart || {};
+                        const purchasedMovies = userData.purchases || [];
                         
-                        // Load cart from Firestore and filter out purchased items
-                        if (userData.cart) {
-                            const purchases = userData.purchases || [];
-                            const cartData = {};
-                            Object.entries(userData.cart).forEach(([key, value]) => {
-                                // Only include items that exist and haven't been purchased
-                                if (value && value.id && !purchases.some(p => p.id === value.id)) {
-                                    cartData[key] = value;
-                                }
-                            });
-                            setCart(Map(cartData));
-                        } else {
-                            setCart(Map());
-                        }
+                        const filteredCart = Object.fromEntries(
+                            Object.entries(firestoreCart).filter(([_, movie]) =>
+                                movie && movie.id && !purchasedMovies.some(p => p.id === movie.id)
+                            )
+                        );
+
+                        setCart(Map(filteredCart));
                     }
                     setUser(currentUser);
                 } else {
-                    // User is signed out
                     setUser(null);
                     setSelectedGenres([]);
                     setCart(Map());
@@ -55,36 +49,38 @@ export const StoreProvider = ({ children }) => {
                 setSelectedGenres([]);
             } finally {
                 setLoading(false);
+                setCartLoading(false);
             }
         });
 
         return () => unsubscribe();
     }, []);
 
-    // Update Firestore whenever cart changes
-    useEffect(() => {
-        const persistCart = async () => {
-            if (user?.uid) {
-                try {
-                    const userRef = doc(firestore, 'users', user.uid);
-                    const cartObject = {};
-                    cart.forEach((value, key) => {
-                        if (value && value.id && !purchases.some(p => p.id === value.id)) {
-                            cartObject[key] = value;
-                        }
-                    });
-                    
-                    await setDoc(userRef, { cart: cartObject }, { merge: true });
-                } catch (error) {
-                    console.error('Error persisting cart:', error);
-                }
-            }
-        };
-        
-        persistCart();
-    }, [cart, user, purchases]);
+    const updateCart = (updater) => {
+        try {
+            const newCart = typeof updater === 'function' ? updater(cart) : updater;
+            const validCart = Map.isMap(newCart) ? newCart : Map(newCart);
+            
+            const cartWithoutPurchased = validCart.filter((movie) => 
+                !purchases.some(purchase => purchase.id === movie.id)
+            );
+            
+            setCart(cartWithoutPurchased);
 
-    // Update Firestore whenever genres change
+            if (user?.uid) {
+                const userRef = doc(firestore, 'users', user.uid);
+                const cartObject = cartWithoutPurchased.toJS();
+                updateDoc(userRef, { cart: cartObject }).catch(error => {
+                    if (error.code === 'not-found') {
+                        setDoc(userRef, { cart: cartObject }, { merge: true });
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Error updating cart:', error);
+        }
+    };
+    
     useEffect(() => {
         if (user?.uid && selectedGenres.length > 0) {
             const userRef = doc(firestore, 'users', user.uid);
@@ -99,13 +95,41 @@ export const StoreProvider = ({ children }) => {
         }
     }, [selectedGenres, user]);
 
-    // Update Firestore whenever purchases change
     useEffect(() => {
         if (user?.uid && purchases.length > 0) {
             const userRef = doc(firestore, 'users', user.uid);
-            setDoc(userRef, { purchases }, { merge: true });
+            const updatePurchases = async () => {
+                try {
+                    await setDoc(userRef, { purchases }, { merge: true });
+
+                    // Keep purchased items marked as purchased in localStorage
+                    const purchasedMovieIds = purchases.map(purchase => purchase.id);
+                    localStorage.setItem('purchased_movies', JSON.stringify(purchasedMovieIds));
+                } catch (error) {
+                    console.error('Error updating purchases:', error);
+                }
+            };
+            updatePurchases();
         }
     }, [purchases, user]);
+
+    useEffect(() => {
+        try {
+            const savedPurchases = localStorage.getItem('purchased_movies');
+            if (savedPurchases) {
+                const purchasedIds = JSON.parse(savedPurchases);
+                setCart(prevCart => {
+                    let newCart = prevCart;
+                    purchasedIds.forEach(id => {
+                        newCart = newCart.delete(id);
+                    });
+                    return newCart;
+                });
+            }
+        } catch (e) {
+            console.error('Error loading purchased movies:', e);
+        }
+    }, []);
 
     const contextValue = {
         user,
@@ -113,10 +137,11 @@ export const StoreProvider = ({ children }) => {
         selectedGenres,
         setSelectedGenres,
         cart,
-        setCart,
+        setCart: updateCart,
         purchases,
         setPurchases,
-        loading
+        loading,
+        cartLoading
     };
 
     if (loading) {

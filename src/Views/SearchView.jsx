@@ -11,23 +11,28 @@ function SearchView() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
     const [totalPages, setTotalPages] = useState(0);
-    const { cart, setCart, purchases } = useStoreContext();
+    const { cart, setCart, purchases, cartLoading } = useStoreContext();
 
     const isMoviePurchased = (movieId) => {
         return purchases.some(purchase => purchase.id === movieId);
     };
 
-    const handleAddToCart = (movie) => {
-        if (isMoviePurchased(movie.id)) {
+    const isMoviePurchasedOrInCart = (movieId) => {
+        return isMoviePurchased(movieId) || cart.has(movieId);
+    };
+
+    const handleAddToCart = (movie, e) => {
+        e.preventDefault();
+        if (isMoviePurchasedOrInCart(movie.id)) {
             return;
         }
 
         setCart(prevCart => {
-            const newCart = prevCart.set(movie.id, {
+            const movieData = {
                 ...movie,
-                id: movie.id // Ensure ID is consistently stored
-            });
-            return newCart;
+                id: movie.id
+            };
+            return prevCart.set(movie.id, movieData);
         });
     };
 
@@ -63,7 +68,7 @@ function SearchView() {
     return (
         <div className="search-view">
             <h2>Search Results for: {query}</h2>
-            {loading ? (
+            {loading || cartLoading ? (
                 <div className="loading">Loading...</div>
             ) : (
                 <>
@@ -83,10 +88,13 @@ function SearchView() {
                                     <div className="movie-info">
                                         <h3>{movie.title}</h3>
                                         <p>{movie.release_date?.split('-')[0]}</p>
-                                        {!isMoviePurchased(movie.id) && (
+                                        {!isMoviePurchasedOrInCart(movie.id) && (
                                             <button
                                                 className={`cart-button ${cart.has(movie.id) ? 'added' : ''}`}
-                                                onClick={() => handleAddToCart(movie)}
+                                                onClick={(e) => {
+                                                    e.preventDefault();
+                                                    handleAddToCart(movie, e);
+                                                }}
                                             >
                                                 {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                                             </button>

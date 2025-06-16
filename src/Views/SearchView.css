@@ -82,7 +82,12 @@
     border: none;
     border-radius: 4px;
     cursor: pointer;
-    transition: background-color 0.3s;
+    transition: all 0.3s ease;
+    opacity: 1;  /* Changed from 0 to 1 to always show */
+}
+
+.movie-card:hover .cart-button:not(.added) {
+    opacity: 1;
 }
 
 .cart-button.added {
@@ -96,6 +101,8 @@
 .cart-button.added:hover {
     background-color: #16a34a;
 }
+
+/* Remove hover opacity rules */
 
 .purchased-badge {
     position: absolute;

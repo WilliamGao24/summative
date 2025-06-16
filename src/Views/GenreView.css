@@ -32,16 +32,11 @@
     border-radius: 0 0 8px 8px;
     cursor: pointer;
     transition: all 0.3s ease;
-    opacity: 0;
-  }
-  
-  .genre-view-item:hover .buy-button:not(.added) {
-    opacity: 1;
+    opacity: 1;  /* Changed from 0 to 1 to always show */
   }
   
   .buy-button.added {
     background-color: #22c55e;
-    opacity: 1;
   }
   
   .buy-button:hover {

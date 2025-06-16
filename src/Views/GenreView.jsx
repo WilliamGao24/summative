@@ -10,7 +10,7 @@ function GenreView() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [page, setPage] = useState(1);
-  const { cart, setCart, purchases } = useStoreContext();
+  const { cart, setCart, purchases, cartLoading } = useStoreContext();
 
   const genres = [
     { genre: "Sci-Fi", id: 878 },
@@ -32,19 +32,23 @@ function GenreView() {
     return purchases.some(purchase => purchase.id === movieId);
   };
 
+  const isMoviePurchasedOrInCart = (movieId) => {
+    return isMoviePurchased(movieId) || cart.has(movieId);
+  };
+
   const handleAddToCart = (movie, e) => {
     e.preventDefault();
 
-    if (isMoviePurchased(movie.id)) {
-        return;
+    if (isMoviePurchasedOrInCart(movie.id)) {
+      return;
     }
 
     setCart(prevCart => {
-        const newCart = prevCart.set(movie.id, {
-            ...movie,
-            id: movie.id // Ensure ID is consistently stored
-        });
-        return newCart;
+      const movieData = {
+        ...movie,
+        id: movie.id
+      };
+      return prevCart.set(movie.id, movieData);
     });
   };
 
@@ -73,7 +77,8 @@ function GenreView() {
     return <div className="error-message">{error}</div>;
   }
 
-  if (loading) {
+  // Wait for both movie data and cart data to load
+  if (loading || cartLoading) {
     return <div className="loading">Loading movies...</div>;
   }
 
@@ -94,10 +99,13 @@ function GenreView() {
                 ) : (
                   <div className="no-image">No Image Available</div>
                 )}
-                {!isMoviePurchased(movie.id) && (
+                {!isMoviePurchasedOrInCart(movie.id) && (
                   <button 
                     className={`buy-button ${cart.has(movie.id) ? 'added' : ''}`}
-                    onClick={(e) => handleAddToCart(movie, e)}
+                    onClick={(e) => {
+                      e.preventDefault(); // Prevent navigation
+                      handleAddToCart(movie, e);
+                    }}
                   >
                     {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                   </button>

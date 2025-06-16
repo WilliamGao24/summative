@@ -10,21 +10,39 @@ import { useNavigate } from 'react-router-dom';
 
 function CartView() {
     const navigate = useNavigate();
-    const { user, cart, setCart, purchases, setPurchases } = useStoreContext();
+    const { user, cart, setCart, purchases, setPurchases, cartLoading } = useStoreContext();
     const [message, setMessage] = useState('');
     const [loading, setLoading] = useState(false);
 
-    const handleRemove = (movieId) => {
-        setCart(prevCart => prevCart.delete(movieId));
-    };
+    if (cartLoading) {
+        return (
+            <div className="cart-container">
+                <Header />
+                <div className="cart-content">
+                    <div className="cart-loading">
+                        <div className="loading-skeleton"></div>
+                        <div className="loading-skeleton"></div>
+                        <div className="loading-skeleton"></div>
+                    </div>
+                </div>
+                <Footer />
+            </div>
+        );
+    }
 
+    const handleRemove = async (movieId) => {
+        setCart(prevCart => {
+            const newCart = prevCart.delete(movieId);
+            return newCart;
+        });
+    };
+    
     const handleCheckout = async () => {
         if (cart.size === 0) {
             setMessage('Your cart is empty!');
             return;
         }
 
-        // Check if any movies are already purchased
         const alreadyPurchased = Array.from(cart.values()).filter(movie => 
             purchases.some(purchase => purchase.id === movie.id)
         );
@@ -36,21 +54,21 @@ function CartView() {
 
         setLoading(true);
         try {
-            // Update Firestore with new purchases
             const userRef = doc(firestore, 'users', user.uid);
             const cartMovies = Array.from(cart.values());
             
-            // Update each movie in Firestore
+            // Add to purchases in Firestore
             await updateDoc(userRef, {
                 purchases: arrayUnion(...cartMovies)
             });
 
-            // Update local state
+            // Update local purchases state
             setPurchases(prev => [...prev, ...cartMovies]);
             
-            // Clear cart and localStorage
-            setCart(Map());
-            localStorage.removeItem('userCart');
+            // Instead of clearing the cart completely, mark items as purchased
+            cartMovies.forEach(movie => {
+                handleRemove(movie.id);
+            });
             
             setMessage('Thank you for your purchase! Your movies are now available in your library.');
         } catch (error) {
@@ -61,7 +79,6 @@ function CartView() {
         }
     };
 
-    // Add navigation buttons layout
     const navigationButtons = (
         <div className="navigation-buttons">
             <button onClick={() => navigate(-1)} className="nav-btn">Back</button>
