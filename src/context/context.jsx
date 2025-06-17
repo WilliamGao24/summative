@@ -1,19 +1,18 @@
-import { createContext, useState, useContext, useEffect } from "react";
+import { createContext, useState, useContext, useEffect, useCallback } from "react";
 import { Map } from 'immutable';
 import { auth, firestore } from '../firebase';
-import { 
+import {
     onAuthStateChanged,
     updateProfile,
     EmailAuthProvider,
     updatePassword,
     reauthenticateWithCredential
 } from 'firebase/auth';
-import { 
-    doc, 
-    getDoc, 
-    setDoc, 
-    updateDoc,
-    arrayUnion 
+import {
+    doc,
+    getDoc,
+    setDoc,
+    updateDoc
 } from 'firebase/firestore';
 
 export const StoreContext = createContext();
@@ -25,55 +24,37 @@ export const StoreProvider = ({ children }) => {
     const [firstName, setFirstName] = useState('');
     const [lastName, setLastName] = useState('');
     const [selectedGenres, setSelectedGenres] = useState([]);
+    const [purchases, setPurchases] = useState([]);
+
     const [cart, setCart] = useState(() => {
         try {
-            // Initialize cart based on user ID to prevent shared carts
-            const currentUser = auth.currentUser;
-            if (currentUser) {
-                const savedCart = localStorage.getItem(`cart_${currentUser.uid}`);
-                return savedCart ? Map(JSON.parse(savedCart)) : Map();
-            }
-            return Map();
+            const savedCart = localStorage.getItem('cart');
+            return savedCart ? Map(JSON.parse(savedCart)) : Map();
         } catch (e) {
             console.error('Error loading cart from localStorage:', e);
             return Map();
         }
     });
-    const [purchases, setPurchases] = useState([]);
 
-    // Clear cart data for a specific user
-    const clearUserCart = (userId) => {
-        if (userId) {
-            localStorage.removeItem(`cart_${userId}`);
-        }
-    };
-
-    // Save cart to localStorage with user-specific key
     useEffect(() => {
-        if (user?.uid) {
-            try {
-                localStorage.setItem(`cart_${user.uid}`, JSON.stringify(cart.toJS()));
-            } catch (e) {
-                console.error('Error saving cart to localStorage:', e);
-            }
+        try {
+            localStorage.setItem('cart', JSON.stringify(cart.toJS()));
+        } catch (e) {
+            console.error('Error saving cart to localStorage:', e);
         }
-    }, [cart, user]);
+    }, [cart]);
 
     const updateUserProfile = async (updates) => {
         if (!user) return false;
 
         try {
             if (updates.newPassword && updates.currentPassword) {
-                try {
-                    const credential = EmailAuthProvider.credential(
-                        user.email,
-                        updates.currentPassword
-                    );
-                    await reauthenticateWithCredential(user, credential);
-                    await updatePassword(user, updates.newPassword);
-                } catch (error) {
-                    throw error;
-                }
+                const credential = EmailAuthProvider.credential(
+                    user.email,
+                    updates.currentPassword
+                );
+                await reauthenticateWithCredential(user, credential);
+                await updatePassword(user, updates.newPassword);
             }
 
             if (updates.firstName || updates.lastName) {
@@ -110,32 +91,11 @@ export const StoreProvider = ({ children }) => {
                         setSelectedGenres(userData.genres || []);
                         setPurchases(userData.purchases || []);
 
-                        const firestoreCart = userData.cart || {};
-                        const purchasedMovies = userData.purchases || [];
-                        
-                        // Get user-specific localStorage cart
-                        const localCartData = localStorage.getItem(`cart_${currentUser.uid}`);
-                        const localCart = localCartData ? Map(JSON.parse(localCartData)) : Map();
-                        
-                        // Merge Firebase cart with localStorage cart
-                        const mergedCart = Map({
-                            ...firestoreCart,
-                            ...localCart.toJS()
-                        }).filter((movie) => 
-                            movie && movie.id && !purchasedMovies.some(purchase => 
-                                purchase.items && Object.keys(purchase.items).includes(movie.id.toString())
-                            )
-                        );
-
-                        // Update both local state and storage
-                        setCart(mergedCart);
-                        localStorage.setItem(`cart_${currentUser.uid}`, JSON.stringify(mergedCart.toJS()));
-
-                        // Sync back to Firebase
-                        const userRef = doc(firestore, 'users', currentUser.uid);
-                        await updateDoc(userRef, { cart: mergedCart.toJS() });
+                        // Merge cart: keep localStorage only
+                        const localStorageCart = localStorage.getItem('cart');
+                        const localCart = localStorageCart ? JSON.parse(localStorageCart) : {};
+                        setCart(Map(localCart));
                     } else {
-                        // If user doc doesn't exist, initialize with empty cart
                         const userRef = doc(firestore, 'users', currentUser.uid);
                         await setDoc(userRef, {
                             firstName: '',
@@ -145,25 +105,22 @@ export const StoreProvider = ({ children }) => {
                             cart: {}
                         });
                         setCart(Map());
-                        localStorage.setItem(`cart_${currentUser.uid}`, JSON.stringify({}));
+                        localStorage.setItem('cart', JSON.stringify({}));
                     }
                     setUser(currentUser);
                 } else {
-                    if (user?.uid) {
-                        // Clear previous user's cart data
-                        clearUserCart(user.uid);
-                    }
+                    const localStorageCart = localStorage.getItem('cart');
+                    const localCart = localStorageCart ? JSON.parse(localStorageCart) : {};
+                    setCart(Map(localCart));
+
                     setUser(null);
                     setFirstName('');
                     setLastName('');
                     setSelectedGenres([]);
                     setPurchases([]);
-                    setCart(Map());
                 }
             } catch (error) {
                 console.error('Error loading user data:', error);
-                setPurchases([]);
-                setSelectedGenres([]);
                 setCart(Map());
             } finally {
                 setLoading(false);
@@ -174,73 +131,32 @@ export const StoreProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    const updateCart = async (updater) => {
-        try {
-            const newCart = typeof updater === 'function' ? updater(cart) : updater;
-            const validCart = Map.isMap(newCart) ? newCart : Map(newCart);
-            
-            const cartWithoutPurchased = validCart.filter((movie) => 
-                !purchases.some(purchase => 
-                    purchase.items && Object.keys(purchase.items).includes(movie.id.toString())
-                )
-            );
-            
-            // Update local state
-            setCart(cartWithoutPurchased);
+    const addToCart = (movie) => {
+        if (!movie || !movie.id) return;
+        const movieId = movie.id.toString();
 
-            // Save to user-specific localStorage
-            if (user?.uid) {
-                localStorage.setItem(`cart_${user.uid}`, JSON.stringify(cartWithoutPurchased.toJS()));
-            }
+        setCart(prevCart => {
+            if (prevCart.has(movieId)) return prevCart;
 
-            // Save to Firebase if user is logged in
-            if (user?.uid) {
-                const userRef = doc(firestore, 'users', user.uid);
-                const cartObject = cartWithoutPurchased.toJS();
-                try {
-                    await updateDoc(userRef, { cart: cartObject });
-                } catch (error) {
-                    if (error.code === 'not-found') {
-                        await setDoc(userRef, { cart: cartObject }, { merge: true });
-                    } else {
-                        console.error('Error updating Firebase cart:', error);
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Error updating cart:', error);
-        }
+            const newCart = prevCart.set(movieId, movie);
+            localStorage.setItem('cart', JSON.stringify(newCart.toJS()));
+            return newCart;
+        });
     };
 
-    const handleCheckout = async () => {
-        if (!user || cart.size === 0) return false;
+    const removeFromCart = (movieId) => {
+        if (!movieId) return;
 
-        try {
-            const purchaseItems = cart.toJS();
-            const timestamp = new Date().toISOString();
-            const purchase = {
-                items: purchaseItems,
-                timestamp,
-                total: cart.size
-            };
-
-            const userRef = doc(firestore, 'users', user.uid);
-            const newPurchases = [...purchases, purchase];
-            
-            await updateDoc(userRef, {
-                purchases: newPurchases,
-                cart: {} // Clear Firebase cart
-            });
-            
-            setPurchases(newPurchases);
-            setCart(Map());
-            clearUserCart(user.uid); // Clear user-specific localStorage cart
-            return true;
-        } catch (error) {
-            console.error("Error processing checkout:", error);
-            return false;
-        }
+        setCart(prevCart => {
+            const newCart = prevCart.delete(movieId.toString());
+            localStorage.setItem('cart', JSON.stringify(newCart.toJS()));
+            return newCart;
+        });
     };
+
+    const isInCart = useCallback((movieId) => {
+        return cart.has(movieId.toString());
+    }, [cart]);
 
     useEffect(() => {
         if (user?.uid && selectedGenres.length > 0) {
@@ -262,9 +178,7 @@ export const StoreProvider = ({ children }) => {
             const updatePurchases = async () => {
                 try {
                     await setDoc(userRef, { purchases }, { merge: true });
-
-                    // Keep purchased items marked as purchased in localStorage
-                    const purchasedMovieIds = purchases.map(purchase => purchase.id);
+                    const purchasedMovieIds = purchases.map(p => p.id);
                     localStorage.setItem('purchased_movies', JSON.stringify(purchasedMovieIds));
                 } catch (error) {
                     console.error('Error updating purchases:', error);
@@ -292,67 +206,29 @@ export const StoreProvider = ({ children }) => {
         }
     }, []);
 
-    // Check if a movie is already in cart
-    const isInCart = (movieId) => {
-        return cart.has(movieId.toString());
-    };
-
-    // Add to cart function
-    const addToCart = (movie) => {
-        if (!movie || !movie.id) return;
-        
-        const movieId = movie.id.toString();
-        if (isInCart(movieId)) {
-            console.log('Movie already in cart');
-            return false;
-        }
-
-        if (purchases.some(purchase => purchase.items[movieId])) {
-            console.log('Movie already purchased');
-            return false;
-        }
-
-        updateCart(currentCart => currentCart.set(movieId, movie));
-        return true;
-    };
-
-    // Remove from cart function
-    const removeFromCart = (movieId) => {
-        if (!movieId) return;
-        updateCart(currentCart => currentCart.delete(movieId.toString()));
-    };
-
-    const contextValue = {
-        user,
-        setUser,
-        firstName,
-        setFirstName,
-        lastName,
-        setLastName,
-        selectedGenres,
-        setSelectedGenres,
-        cart,
-        setCart: updateCart,
-        purchases,
-        setPurchases,
-        loading,
-        cartLoading,
-        updateUserProfile,
-        handleCheckout,
-        addToCart,
-        removeFromCart,
-        isInCart
-    };
-
-    if (loading) {
-        return null;
-    }
+    if (loading) return null;
 
     return (
-        <StoreContext.Provider value={contextValue}>
+        <StoreContext.Provider value={{
+            user,
+            loading,
+            cartLoading,
+            firstName,
+            lastName,
+            selectedGenres,
+            setSelectedGenres,
+            cart,
+            setCart,
+            purchases,
+            setPurchases,
+            updateUserProfile,
+            addToCart,
+            removeFromCart,
+            isInCart
+        }}>
             {children}
         </StoreContext.Provider>
     );
-}
+};
 
 export const useStoreContext = () => useContext(StoreContext);

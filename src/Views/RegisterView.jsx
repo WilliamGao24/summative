@@ -98,14 +98,11 @@ function RegisterView() {
 
             await createUserDocument(user, formData);
 
-            setUser(user);
+            // Update selected genres
             setSelectedGenres(formData.genres);
 
-            if (formData.genres.length > 0) {
-                navigate(`/movies/genre/${formData.genres[0]}`);
-            } else {
-                navigate('/settings');
-            }
+            // Navigate to movies view
+            navigate('/movies');
         } catch (error) {
             console.error("Registration error:", error);
             switch (error.code) {
@@ -158,11 +155,10 @@ function RegisterView() {
             };
 
             await createUserDocument(result.user, userData);
-            setUser(result.user);
             setSelectedGenres(formData.genres);
 
-            // Navigate to the first selected genre
-            navigate(`/movies/genre/${formData.genres[0]}`);
+            // Navigate to movies view
+            navigate('/movies');
         } catch (error) {
             console.error('Google registration error:', error);
             if (error.code === 'auth/popup-closed-by-user') {

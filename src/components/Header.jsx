@@ -36,7 +36,7 @@ function Header() {
     const handleLogout = async () => {
         try {
             await signOut(auth);
-            setUser(null);
+            setUser(null);  // This line fixes the logout error by resetting user in context
             navigate('/');
         } catch (error) {
             console.error('Logout error:', error);
@@ -47,14 +47,11 @@ function Header() {
     const formatUserName = () => {
         if (user?.displayName) {
             const names = user.displayName.split(' ');
-            // If there's both first and last name, use first name + last initial
             if (names.length > 1) {
                 return `${names[0]} ${names[1].charAt(0)}.`;
             }
-            // Otherwise just use the first name
             return names[0];
         } else if (user?.email) {
-            // If no display name but email exists, use part before @ and capitalize
             const name = user.email.split('@')[0];
             return name.charAt(0).toUpperCase() + name.slice(1).replace(/[._]/g, ' ');
         }

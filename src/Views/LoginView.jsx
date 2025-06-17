@@ -44,8 +44,8 @@ function LoginView() {
                 throw new Error('User not registered. Please register first.');
             }
 
-            // Set the user in context
-            setUser(userCredential.user);
+            // Navigate to movies after successful login
+            navigate('/movies');
             
             // Load user data from Firestore
             const userData = userDoc.data();
@@ -53,7 +53,8 @@ function LoginView() {
                 localStorage.setItem('userGenres', JSON.stringify(userData.genres));
             }
 
-            navigate('/movies');
+            // Set the user in context
+            setUser(userCredential.user);
         } catch (error) {
             console.error('Login error:', error);
             switch (error.code) {
@@ -87,15 +88,7 @@ function LoginView() {
                 throw new Error('Google account not registered. Please register first.');
             }
 
-            // Set the user in context
-            setUser(result.user);
-            
-            // Load user data from Firestore
-            const userData = userDoc.data();
-            if (userData.genres) {
-                localStorage.setItem('userGenres', JSON.stringify(userData.genres));
-            }
-
+            // Navigate to movies after successful login
             navigate('/movies');
         } catch (error) {
             console.error('Google login error:', error);
