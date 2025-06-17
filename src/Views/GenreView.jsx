@@ -98,16 +98,15 @@ function GenreView() {
                   />
                 ) : (
                   <div className="no-image">No Image Available</div>
-                )}
-                {!isMoviePurchasedOrInCart(movie.id) && (
+                )}                {!isMoviePurchased(movie.id) && (
                   <button 
-                    className={`buy-button ${cart.has(movie.id) ? 'added' : ''}`}
+                    className="buy-button"
                     onClick={(e) => {
                       e.preventDefault(); // Prevent navigation
                       handleAddToCart(movie, e);
                     }}
                   >
-                    {cart.has(movie.id) ? 'Added to Cart' : 'Add to Cart'}
+                    {cart.has(movie.id) ? 'Added' : 'Add to Cart'}
                   </button>
                 )}
                 {isMoviePurchased(movie.id) && (
